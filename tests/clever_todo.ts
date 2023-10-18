@@ -12,15 +12,17 @@ describe('clever_todo', () => {
 
     const connection = anchor.getProvider().connection;
 
-    it('Is initialized!', async () => {
-        console.log(connection);
+    const airdrop = async () => {
         const signature = await connection.requestAirdrop(
             authority.publicKey,
             anchor.web3.LAMPORTS_PER_SOL
         );
 
         await connection.confirmTransaction(signature);
+    };
 
+    it('Is initialized!', async () => {
+        await airdrop();
         const [profilePda, bump] = anchor.web3.PublicKey.findProgramAddressSync(
             [
                 new TextEncoder().encode('USER_STATE'),
@@ -41,4 +43,29 @@ describe('clever_todo', () => {
             .rpc();
         console.log('Your transaction signature', tx);
     });
+
+    it('Add repo', async() => {
+      
+
+
+      const [repoPda, bump] = anchor.web3.PublicKey.findProgramAddressSync(
+        [
+            new TextEncoder().encode('REPO_STATE'),
+            authority.publicKey.toBuffer(),
+            
+        ],
+        program.programId
+    );
+
+    const tx = await program.methods
+    .addRepo({}).accounts({
+        authority: authority.publicKey,
+        userProfile: ,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        repoAccount: repoPda
+    })
+    .signers([authority])
+    .rpc();
+console.log('Your transaction signature', tx);
+    })
 });
