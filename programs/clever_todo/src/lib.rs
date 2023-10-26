@@ -12,11 +12,12 @@ pub mod clever_todo {
     use super::*;
 
     pub fn initialize_user(
-        ctx: Context<InitializeUser>
+        ctx: Context<InitializeUser>, _github: String
     ) -> Result<()> {
         // Initialize user profile with default data
         let user_profile = &mut ctx.accounts.user_profile;
         user_profile.authority = ctx.accounts.authority.key();
+        user_profile.github = _github;
         user_profile.last_repo = 0;
         user_profile.repo_count = 0;
 
@@ -46,7 +47,7 @@ pub mod clever_todo {
         Ok(())
     }
 
-    pub fn add_todo(ctx: Context<AddTodo>, _content: String) -> Result<()> {
+    pub fn add_todo(ctx: Context<AddTodo>, repo_idx: u8, _content: String) -> Result<()> {
 
         let todo_account = &mut ctx.accounts.todo_account;
         let repo_account = &mut ctx.accounts.repo_account;
@@ -138,11 +139,12 @@ pub struct AddRepo<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction()]
+#[instruction(repo_idx: u8)]
 pub struct AddTodo<'info> {
+
     #[account(
         mut,
-        seeds = [REPO_TAG, authority.key().as_ref()],
+        seeds = [REPO_TAG, authority.key().as_ref(), &[repo_idx].as_ref()],
         bump,
         has_one = authority,
     )]

@@ -21,6 +21,9 @@ describe('clever_todo', () => {
         await connection.confirmTransaction(signature);
     };
 
+    let userProfile: anchor.web3.PublicKey;
+    let userRepo: anchor.web3.PublicKey;
+
     it('Is initialized!', async () => {
         await airdrop();
         const [profilePda, bump] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -31,9 +34,8 @@ describe('clever_todo', () => {
             program.programId
         );
 
-        // Add your test here.
-        const tx = await program.methods
-            .initializeUser()
+        await program.methods
+            .initializeUser('new github')
             .accounts({
                 authority: authority.publicKey,
                 userProfile: profilePda,
@@ -41,31 +43,60 @@ describe('clever_todo', () => {
             })
             .signers([authority])
             .rpc();
-        console.log('Your transaction signature', tx);
+
+        userProfile = profilePda;
     });
 
-    it('Add repo', async() => {
-      
+    it('Add repo', async () => {
+        const account = await program.account.userProfile.fetch(userProfile);
 
+        const [repoPda, bump] = anchor.web3.PublicKey.findProgramAddressSync(
+            [
+                new TextEncoder().encode('REPO_STATE'),
+                authority.publicKey.toBuffer(),
+                new Uint8Array([account.lastRepo]),
+            ],
+            program.programId
+        );
 
-      const [repoPda, bump] = anchor.web3.PublicKey.findProgramAddressSync(
-        [
-            new TextEncoder().encode('REPO_STATE'),
-            authority.publicKey.toBuffer(),
-            
-        ],
-        program.programId
-    );
+        await program.methods
+            .addRepo('Test repo')
+            .accounts({
+                authority: authority.publicKey,
+                userProfile: userProfile,
+                systemProgram: anchor.web3.SystemProgram.programId,
+                repoAccount: repoPda,
+            })
+            .signers([authority])
+            .rpc();
 
-    const tx = await program.methods
-    .addRepo({}).accounts({
-        authority: authority.publicKey,
-        userProfile: ,
-        systemProgram: anchor.web3.SystemProgram.programId,
-        repoAccount: repoPda
-    })
-    .signers([authority])
-    .rpc();
-console.log('Your transaction signature', tx);
-    })
+        userRepo = repoPda;
+    });
+
+    it('Add todo', async () => {
+        const repo = await program.account.userRepos.fetch(userRepo);
+
+        const [ticketPda, bump] = anchor.web3.PublicKey.findProgramAddressSync(
+            [
+                new TextEncoder().encode('TODO_STATE'),
+                authority.publicKey.toBuffer(),
+                new Uint8Array([repo.lastTodo]),
+            ],
+            program.programId
+        );
+
+        await program.methods
+            .addTodo(0, 'test')
+            .accounts({
+                authority: authority.publicKey,
+                repoAccount: userRepo,
+                systemProgram: anchor.web3.SystemProgram.programId,
+                todoAccount: ticketPda,
+            })
+            .signers([authority])
+            .rpc();
+
+        const ticket = await program.account.userTickets.fetch(ticketPda);
+        console.log(ticket);
+    });
 });
